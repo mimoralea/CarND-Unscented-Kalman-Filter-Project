@@ -65,6 +65,9 @@ public:
   ///* Augmented state dimension
   int n_aug_;
 
+  ///* Augmented state dimension
+  int n_sig_;
+
   ///* Sigma point spreading parameter
   double lambda_;
 
@@ -83,6 +86,12 @@ public:
    * Destructor
    */
   virtual ~UKF();
+
+  void Init(const MeasurementPackage m_pack);
+  MatrixXd GenerateSigmaPoints();
+  void SigmaPointPrediction(const MatrixXd &Xsig_aug, float dt);
+  void PredictMeanAndCovariance();
+
 
   /**
    *

@@ -34,3 +34,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
         rmse = rmse.array().sqrt();
         return rmse;
 }
+
+float normalize_angle(float angle) {
+        return atan2(sin(angle), cos(angle));
+}
