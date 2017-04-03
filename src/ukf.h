@@ -85,6 +85,12 @@ public:
   virtual ~UKF();
 
   /**
+   *
+   * @param timestamp The timestamp as passed by the measurement package
+   */
+  float ProcessTimestamp(const long timestamp);
+
+  /**
    * ProcessMeasurement
    * @param meas_package The latest measurement data of either radar or laser
    */
