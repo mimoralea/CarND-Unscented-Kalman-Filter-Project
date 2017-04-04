@@ -24,4 +24,5 @@ public:
 };
 
 float normalize_angle(float angle);
+float atan2_m(float y, float x);
 #endif /* TOOLS_H_ */

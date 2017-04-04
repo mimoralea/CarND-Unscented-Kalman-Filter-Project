@@ -60,6 +60,12 @@ public:
   VectorXd weights_;
 
   ///* State dimension
+  int n_z_radar_;
+
+  ///* State dimension
+  int n_z_lidar_;
+
+  ///* State dimension
   int n_x_;
 
   ///* Augmented state dimension
@@ -92,6 +98,7 @@ public:
   void SigmaPointPrediction(const MatrixXd &Xsig_aug, float dt);
   void PredictMeanAndCovariance();
 
+  void PredictRadarMeasurement();
 
   /**
    *
