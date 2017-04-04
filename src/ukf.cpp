@@ -194,18 +194,18 @@ void UKF::Prediction(double dt) {
 MatrixXd UKF::GenerateSigmaPoints() {
 
         //create augmented mean vector
-        VectorXd x_aug = VectorXd(n_aug_);
+        VectorXd x_aug = VectorXd::Zero(n_aug_);
 
         //create augmented state covariance
         MatrixXd P_aug = MatrixXd::Zero(n_aug_, n_aug_);
 
         //create process noise covariance
-        MatrixXd Q = MatrixXd(n_aug_ - n_x_, n_aug_ - n_x_);
+        MatrixXd Q = MatrixXd::Zero(n_aug_ - n_x_, n_aug_ - n_x_);
         Q << std_a_ * std_a_, 0,
                 0, std_yawdd_ * std_yawdd_;
 
         //create sigma point matrix
-        MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+        MatrixXd Xsig_aug = MatrixXd::Zero(n_aug_, 2 * n_aug_ + 1);
 
         //create augmented mean state
         x_aug << x_, 0, 0;
@@ -294,7 +294,6 @@ void UKF::UpdateLidar(MeasurementPackage m_pack) {
         MatrixXd diff = Zsig.colwise() - z_pred;
         diff.row(1) = diff.row(1).array().unaryExpr(&normalize_angle);
         S = (diff * weights_.asDiagonal()) * diff.transpose();
-
         S = S + R_lidar_;
 
         // UpdateState
@@ -330,6 +329,7 @@ void UKF::UpdateLidar(MeasurementPackage m_pack) {
  * @param {MeasurementPackage} m_pack
  */
 void UKF::UpdateRadar(MeasurementPackage m_pack) {
+
         // PredictRadarMeasurement
 
         //create matrix for sigma points in measurement space
@@ -365,8 +365,6 @@ void UKF::UpdateRadar(MeasurementPackage m_pack) {
         MatrixXd diff = Zsig.colwise() - z_pred;
         diff.row(1) = diff.row(1).array().unaryExpr(&normalize_angle);
         S = (diff * weights_.asDiagonal()) * diff.transpose();
-
-        //add measurement noise covariance matrix
         S = S + R_radar_;
 
         // UpdateState
@@ -385,8 +383,8 @@ void UKF::UpdateRadar(MeasurementPackage m_pack) {
         //residual
         VectorXd z = VectorXd(n_z_radar_);
         z << m_pack.raw_measurements_[0],
-                m_pack.raw_measurements_[1],
-                m_pack.raw_measurements_[2];
+             m_pack.raw_measurements_[1],
+             m_pack.raw_measurements_[2];
         VectorXd z_diff = z - z_pred;
 
         //angle normalization
@@ -397,4 +395,3 @@ void UKF::UpdateRadar(MeasurementPackage m_pack) {
         P_ = P_ - K * S * K.transpose();
         NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
 }
-
