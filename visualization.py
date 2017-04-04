@@ -2,7 +2,7 @@ import plotly.offline as py
 from plotly.graph_objs import *
 import pandas as pd
 import math
-py.init_notebook_mode()
+#py.init_notebook_mode()
 
 my_cols=['px_est','py_est','vx_est','vy_est','px_meas','py_meas','px_gt','py_gt','vx_gt','vy_gt']
 with open('./output-1.txt') as f:
