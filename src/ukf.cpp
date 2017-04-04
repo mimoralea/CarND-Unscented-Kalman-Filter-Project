@@ -21,6 +21,9 @@ UKF::UKF() {
         // if this is false, radar measurements will be ignored (except during init)
         use_radar_ = true;
 
+        //
+        is_initialized_ = false;
+
         // initial state vector
         x_ = VectorXd(5);
 
@@ -88,7 +91,7 @@ void UKF::Init(const MeasurementPackage m_pack) {
                 return;
         }
 
-        float px, py, vx = 0, vy = 0, v = 0, yaw = 0, yaw_rate = 0;
+        float px = 0, py = 0, vx = 0, vy = 0, v = 0, yaw = 0, yaw_rate = 0;
         if (m_pack.sensor_type_ == MeasurementPackage::RADAR) {
 
                 // extract the RADAR measurements and convert from
@@ -125,6 +128,7 @@ void UKF::Init(const MeasurementPackage m_pack) {
                 -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
         // set weights
+        weights_ = VectorXd(n_sig_);
         weights_.fill(0.5 / (n_aug_ + lambda_));
         weights_(0) = lambda_ / (lambda_ + n_aug_);
 
@@ -225,6 +229,7 @@ MatrixXd UKF::GenerateSigmaPoints() {
         cout << endl;
         cout << "Xsig_aug = " << endl;
         cout << Xsig_aug << endl;
+        cout << "----------------------------------------------" << endl;
         return Xsig_aug;
 }
 
@@ -260,7 +265,7 @@ void UKF::SigmaPointPrediction(const MatrixXd &Xsig_aug, float dt) {
         //print result
         cout << "Xsig_pred = " << endl;
         cout << Xsig_pred_ << endl;
-
+        cout << "----------------------------------------------" << endl;
 }
 
 void UKF::PredictMeanAndCovariance() {
@@ -341,13 +346,12 @@ void UKF::UpdateLidar(MeasurementPackage m_pack) {
         VectorXd z_diff = z - z_pred;
 
         //angle normalization
-        //x_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
         z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
 
         //update state mean and covariance matrix
         x_ = x_ + K * z_diff;
         P_ = P_ - K * S * K.transpose();
-        NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
+        NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
 
         //print result
         cout << endl;
