@@ -290,14 +290,71 @@ void UKF::PredictMeanAndCovariance() {
  */
 void UKF::UpdateLidar(MeasurementPackage m_pack) {
 
-        /**
-           TODO:
+        // PredictLidarMeasurement
 
-           Complete this function! Use lidar data to update the belief about the object's
-           position. Modify the state vector, x_, and covariance, P_.
+        //create matrix for sigma points in measurement space
+        MatrixXd Zsig = MatrixXd(n_z_lidar_, n_sig_);
 
-           You'll also need to calculate the lidar NIS.
-        */
+        //mean predicted measurement
+        VectorXd z_pred = VectorXd::Zero(n_z_lidar_);
+
+        //measurement covariance matrix S
+        MatrixXd S = MatrixXd::Zero(n_z_radar_, n_z_radar_);
+
+        ArrayXd pxs = Xsig_pred_.row(0);
+        ArrayXd pys = Xsig_pred_.row(1);
+        Zsig.row(0) = pxs;
+        Zsig.row(1) = pys;
+
+        //predicted state mean
+        // z_pred = (Zsig * weights_.asDiagonal()).rowwise().sum();
+        z_pred = Zsig * weights_;
+
+        //measurement covariance matrix S
+        MatrixXd diff = Zsig.colwise() - z_pred;
+        diff.row(1) = diff.row(1).array().unaryExpr(&normalize_angle);
+        S = (diff * weights_.asDiagonal()) * diff.transpose();
+
+        //add measurement noise covariance matrix
+        MatrixXd R = MatrixXd(n_z_lidar_, n_z_lidar_);
+        R << std_laspx_ * std_laspx_ , 0,
+             0, std_laspy_ * std_laspy_;
+        S = S + R;
+
+        // UpdateState
+
+        //calculate cross correlation matrix
+        MatrixXd Tc = MatrixXd::Zero(n_x_, n_z_lidar_);
+        MatrixXd x_diffs = Xsig_pred_.colwise() - x_;
+        MatrixXd z_diffs = Zsig.colwise() - z_pred;
+        x_diffs.row(3) = x_diffs.row(3).array().unaryExpr(&normalize_angle);
+        z_diffs.row(1) = z_diffs.row(1).array().unaryExpr(&normalize_angle);
+        Tc = (x_diffs * weights_.asDiagonal()) * z_diffs.transpose();
+
+        //Kalman gain K;
+        MatrixXd K = Tc * S.inverse();
+
+        //residual
+        VectorXd z = VectorXd(n_z_lidar_);
+        z << m_pack.raw_measurements_[0],
+             m_pack.raw_measurements_[1];
+        VectorXd z_diff = z - z_pred;
+
+        //angle normalization
+        //x_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
+        z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
+
+        //update state mean and covariance matrix
+        x_ = x_ + K * z_diff;
+        P_ = P_ - K * S * K.transpose();
+        NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
+
+        //print result
+        cout << endl;
+        cout << "Updated state x: " << endl;
+        cout << x_ << endl;
+        cout << "Updated state covariance P: " << endl;
+        cout << P_ << endl;
 }
 
 /**
