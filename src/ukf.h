@@ -2,90 +2,26 @@
 #define UKF_H
 
 #include "measurement_package.h"
+#include "tools.h"
 #include "Eigen/Dense"
 #include <vector>
 #include <string>
 #include <fstream>
-#include "tools.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 class UKF {
+
 public:
-
-        ///* initially set to false, set to true in first call of ProcessMeasurement
-        bool is_initialized_;
-
-        ///* if this is false, laser measurements will be ignored (except for init)
-        bool use_laser_;
-
-        ///* if this is false, radar measurements will be ignored (except for init)
-        bool use_radar_;
-
-        ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
-        VectorXd x_;
-
-        ///* state covariance matrix
-        MatrixXd P_;
-
-        ///* predicted sigma points matrix
-        MatrixXd Xsig_pred_;
-
-        MatrixXd R_lidar_;
-
-        MatrixXd R_radar_;
-
-        ///* time when the state is true, in us
-        long long time_us_;
-
-        ///* Process noise standard deviation longitudinal acceleration in m/s^2
-        double std_a_;
-
-        ///* Process noise standard deviation yaw acceleration in rad/s^2
-        double std_yawdd_;
-
-        ///* Laser measurement noise standard deviation position1 in m
-        double std_laspx_;
-
-        ///* Laser measurement noise standard deviation position2 in m
-        double std_laspy_;
-
-        ///* Radar measurement noise standard deviation radius in m
-        double std_radr_;
-
-        ///* Radar measurement noise standard deviation angle in rad
-        double std_radphi_;
-
-        ///* Radar measurement noise standard deviation radius change in m/s
-        double std_radrd_ ;
-
-        ///* Weights of sigma points
-        VectorXd weights_;
-
-        ///* State dimension
-        int n_z_radar_;
-
-        ///* State dimension
-        int n_z_lidar_;
-
-        ///* State dimension
-        int n_x_;
-
-        ///* Augmented state dimension
-        int n_aug_;
-
-        ///* Augmented state dimension
-        int n_sig_;
-
-        ///* Sigma point spreading parameter
-        double lambda_;
-
-        ///* the current NIS for radar
+        // the current NIS for radar
         double NIS_radar_;
 
-        ///* the current NIS for laser
+        // the current NIS for laser
         double NIS_laser_;
+
+        // state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
+        VectorXd x_;
 
         /**
          * Constructor
@@ -96,19 +32,6 @@ public:
          * Destructor
          */
         virtual ~UKF();
-
-        void Init(const MeasurementPackage m_pack);
-        MatrixXd GenerateSigmaPoints();
-        void SigmaPointPrediction(const MatrixXd &Xsig_aug, float dt);
-        void PredictMeanAndCovariance();
-
-        void PredictRadarMeasurement();
-
-        /**
-         *
-         * @param timestamp The timestamp as passed by the measurement package
-         */
-        float ProcessTimestamp(const long timestamp);
 
         /**
          * ProcessMeasurement
@@ -134,6 +57,95 @@ public:
          * @param meas_package The measurement at k+1
          */
         void UpdateRadar(MeasurementPackage meas_package);
+
+
+private:
+        // initially set to false, set to true in first call of ProcessMeasurement
+        bool is_initialized_;
+
+        // if this is false, laser measurements will be ignored (except for init)
+        bool use_laser_;
+
+        // if this is false, radar measurements will be ignored (except for init)
+        bool use_radar_;
+
+        // state covariance matrix
+        MatrixXd P_;
+
+        // predicted sigma points matrix
+        MatrixXd Xsig_pred_;
+
+        // R matrix for lidar measurements
+        MatrixXd R_lidar_;
+
+        // R matrix for radar measurements
+        MatrixXd R_radar_;
+
+        // time when the state is true, in us
+        long long time_us_;
+
+        // Process noise standard deviation longitudinal acceleration in m/s^2
+        double std_a_;
+
+        // Process noise standard deviation yaw acceleration in rad/s^2
+        double std_yawdd_;
+
+        // Weights of sigma points
+        VectorXd weights_;
+
+        // State dimension
+        int n_z_radar_;
+
+        // State dimension
+        int n_z_lidar_;
+
+        // State dimension
+        int n_x_;
+
+        // Augmented state dimension
+        int n_aug_;
+
+        // Augmented state dimension
+        int n_sig_;
+
+        // Sigma point spreading parameter
+        double lambda_;
+
+        /**
+         * Initialization of the unscented kalman filter
+         *
+         * @param m_pack
+         */
+        void Init(const MeasurementPackage m_pack);
+
+        /**
+         * Generate sigma points method simplifying kalman logic
+         */
+        MatrixXd GenerateSigmaPoints();
+
+        /**
+         * Sigma point prediction using the augmented matrix and the delta time
+         *
+         * @param Xsig_aug
+         * @param dt
+         */
+        void SigmaPointPrediction(const MatrixXd &Xsig_aug, float dt);
+
+        /**
+         * Predict mean and covariance separating logic
+         */
+        void PredictMeanAndCovariance();
+
+        /**
+         * Predict radar measurement separating logic
+         */
+        void PredictRadarMeasurement();
+
+        /**
+         *
+         * @param timestamp The timestamp as passed by the measurement package
+         */
+        float ProcessTimestamp(const long timestamp);
 };
 
 #endif /* UKF_H */

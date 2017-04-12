@@ -13,6 +13,12 @@ using std::endl;
 
 #define ZERO 1e-9
 
+#define STD_LASPX 0.15
+#define STD_LASPY 0.15
+#define STD_RADR 0.3
+#define STD_RADPHI 0.03
+#define STD_RADRD 0.3
+
 /**
  * Initializes Unscented Kalman filter
  */
@@ -23,46 +29,31 @@ UKF::UKF() {
         // if this is false, radar measurements will be ignored (except during init)
         use_radar_ = true;
 
-        //
+        // bool to control initialization process
         is_initialized_ = false;
 
-        // Process noise standard deviation longitudinal acceleration in m/s^2
-        std_a_ = 0.5;
+        // process noise standard deviation longitudinal acceleration in m/s^2
+        std_a_ = 0.08;
 
-        // Process noise standard deviation yaw acceleration in rad/s^2
-        std_yawdd_ = 0.25;
+        // process noise standard deviation yaw acceleration in rad/s^2
+        std_yawdd_ = 0.55;
 
-        // Laser measurement noise standard deviation position1 in m
-        std_laspx_ = 0.225;
-
-        // Laser measurement noise standard deviation position2 in m
-        std_laspy_ = 0.15;
-
-        // Radar measurement noise standard deviation radius in m
-        std_radr_ = 0.15;
-
-        // Radar measurement noise standard deviation angle in rad
-        std_radphi_ = 0.0015;
-
-        // Radar measurement noise standard deviation radius change in m/s
-        std_radrd_ = 0.08;
-
-        //set state dimension
+        // set state dimension
         n_x_ = 5;
 
-        //set augmented dimension
+        // set augmented dimension
         n_aug_ = n_x_ + 2;
 
-        //set augmented dimension
+        // set augmented dimension
         n_sig_ = 2 * n_aug_ + 1;
 
-        //
+        // radar R dimension
         n_z_radar_ = 3;
 
-        //
+        // lidar R dimension
         n_z_lidar_ = 2;
 
-        //define spreading parameter
+        // define spreading parameter
         lambda_ = 3 - n_aug_;
 
         // initial state vector
@@ -71,12 +62,16 @@ UKF::UKF() {
         // initial covariance matrix
         P_ = MatrixXd::Zero(n_x_, n_x_);
 
+        // sigma predicted matrix
         Xsig_pred_ = MatrixXd::Zero(n_x_, n_sig_);
 
+        // weights vector
         weights_ = VectorXd::Zero(n_sig_);
 
+        // R lidar matrix
         R_lidar_ = MatrixXd::Zero(n_z_lidar_, n_z_lidar_);
 
+        // R radar matrix
         R_radar_ = MatrixXd::Zero(n_z_radar_, n_z_radar_);
 }
 
@@ -88,7 +83,7 @@ void UKF::Init(const MeasurementPackage m_pack) {
         /*****************************************************************************
          *  Initialization
          ****************************************************************************/
-        float px = 0, py = 0, vx = 0, vy = 0, v = 0, yaw = 0, yaw_rate = 0;
+        float px = 0, py = 0, v = 0;
         if (m_pack.sensor_type_ == MeasurementPackage::RADAR) {
 
                 // extract the RADAR measurements and convert from
@@ -100,10 +95,7 @@ void UKF::Init(const MeasurementPackage m_pack) {
                 // calculate position and velocity
                 px = range * cos(bearing);
                 py = range * sin(bearing);
-                vx = range_rate * cos(bearing);
-                vy = range_rate * sin(bearing);
-                v = sqrt(vx*vx + vy*vy);
-                yaw = vx == 0 ? yaw : vy / vx;
+                v = range_rate;
 
         } else if (m_pack.sensor_type_ == MeasurementPackage::LASER) {
 
@@ -113,11 +105,11 @@ void UKF::Init(const MeasurementPackage m_pack) {
         }
 
         // set the state and state covariance matrices
-        x_ << px , py , v, yaw, yaw_rate;
+        x_ << px , py , v, 0, 0;
         P_ << 1, 0, 0, 0, 0,
               0, 1, 0, 0, 0,
-              0, 0, 1000, 0, 0,
-              0, 0, 0, 1000, 0,
+              0, 0, 100, 0, 0,
+              0, 0, 0, 100, 0,
               0, 0, 0, 0, 1;
 
         // set weights
@@ -125,13 +117,13 @@ void UKF::Init(const MeasurementPackage m_pack) {
         weights_(0) = lambda_ / (lambda_ + n_aug_);
 
         // radar covariance matrix
-        R_radar_ << std_radr_ * std_radr_ , 0, 0,
-                    0, std_radphi_ * std_radphi_, 0,
-                    0, 0, std_radrd_ * std_radrd_;
+        R_radar_ << STD_RADR * STD_RADR , 0, 0,
+                0, STD_RADPHI * STD_RADPHI, 0,
+                0, 0, STD_RADRD * STD_RADRD;
 
         // lidar covariance matrix
-        R_lidar_ << std_laspx_ * std_laspx_ , 0,
-                    0, std_laspy_ * std_laspy_;
+        R_lidar_ << STD_LASPX * STD_LASPX , 0,
+                0, STD_LASPY * STD_LASPY;
 
         // ensure we mark the timestamp
         time_us_ = m_pack.timestamp_;
@@ -205,7 +197,7 @@ MatrixXd UKF::GenerateSigmaPoints() {
                 0, std_yawdd_ * std_yawdd_;
 
         //create sigma point matrix
-        MatrixXd Xsig_aug = MatrixXd::Zero(n_aug_, 2 * n_aug_ + 1);
+        MatrixXd Xsig_aug = MatrixXd::Zero(n_aug_, n_sig_);
 
         //create augmented mean state
         x_aug << x_, 0, 0;
@@ -316,7 +308,7 @@ void UKF::UpdateLidar(MeasurementPackage m_pack) {
         VectorXd z_diff = z - z_pred;
 
         //angle normalization
-        z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
+        z_diff(1) = normalize_angle(z_diff(1));
 
         //update state mean and covariance matrix
         x_ = x_ + K * z_diff;
@@ -383,8 +375,8 @@ void UKF::UpdateRadar(MeasurementPackage m_pack) {
         //residual
         VectorXd z = VectorXd(n_z_radar_);
         z << m_pack.raw_measurements_[0],
-             m_pack.raw_measurements_[1],
-             m_pack.raw_measurements_[2];
+                m_pack.raw_measurements_[1],
+                m_pack.raw_measurements_[2];
         VectorXd z_diff = z - z_pred;
 
         //angle normalization

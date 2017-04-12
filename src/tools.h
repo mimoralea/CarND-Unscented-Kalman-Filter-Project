@@ -1,9 +1,11 @@
 #ifndef TOOLS_H_
 #define TOOLS_H_
+
 #include <vector>
 #include "Eigen/Dense"
 
 class Tools {
+
 public:
         /**
          * Constructor.
@@ -25,4 +27,5 @@ public:
 
 float normalize_angle(float angle);
 float atan2_m(float y, float x);
+
 #endif /* TOOLS_H_ */
