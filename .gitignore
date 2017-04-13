@@ -3,3 +3,7 @@
 
 # build files
 build/
+
+kalman_tracker_linux/
+
+data_*.txt
